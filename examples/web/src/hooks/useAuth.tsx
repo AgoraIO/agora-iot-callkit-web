@@ -4,12 +4,11 @@ import { useNavigate } from "react-router-dom";
 
 import { ACTIVE_ACCOUNT, BASE_URL_TAIL, fetchAPI, generateBasicAuth } from "../configs/server";
 
-import { useLocalStorage } from "./useLocalStorage";
+import { useSessionStorage } from "./useSessionStorage";
 
 export interface AuthContextProps {
   user: User;
   login: (data: User) => Promise<void>;
-  logout: () => void;
 }
 
 export interface User {
@@ -23,12 +22,11 @@ export interface User {
 const AuthContext = createContext<AuthContextProps>({
   user: {},
   login: async () => {},
-  logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useLocalStorage("user", null);
-  const [settings] = useLocalStorage("settings", null);
+  const [user, setUser] = useSessionStorage("user", null);
+  const [settings] = useSessionStorage("settings", null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +36,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (data: User) => {
+    if (settings.appId === "") {
+      Toast.show("please input appid in setting page");
+      return;
+    }
     const res = await fetchAPI({
       url: `${settings.region[0]}${BASE_URL_TAIL}${ACTIVE_ACCOUNT}`,
       body: {
@@ -72,16 +74,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    navigate("/", { replace: true });
-  };
-
   const value = useMemo(
     () => ({
       user,
       login,
-      logout,
     }),
     [user],
   );

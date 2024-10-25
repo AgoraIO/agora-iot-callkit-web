@@ -3,7 +3,7 @@ import getAgoraIotEngine, { InitParam } from "iot-callkit-web";
 import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 
 import { useAuth } from "./useAuth";
-import { useLocalStorage } from "./useLocalStorage";
+import { useSessionStorage } from "./useSessionStorage";
 
 export interface IotEngineContextProps {
   iotEngine: IAgoraIotAppSdk;
@@ -16,7 +16,7 @@ const IotEngineContext = createContext<IotEngineContextProps>({
 export const IotEngineProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
 
-  const [settings] = useLocalStorage("settings", null);
+  const [settings] = useSessionStorage("settings", null);
   const iotEngine = useRef<IAgoraIotAppSdk>(getAgoraIotEngine());
   useEffect(() => {
     if (!user || !settings) {

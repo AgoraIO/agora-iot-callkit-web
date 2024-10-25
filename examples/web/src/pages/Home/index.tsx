@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 import LogSink, { log } from "../../components/LogSink";
 import { useIotEngine } from "../../hooks/useIotEngine";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useSessionStorage } from "../../hooks/useSessionStorage";
 
 import "./index.scss";
 
@@ -23,22 +23,20 @@ interface ConnectionObjStore {
   localNodeId: string;
   isPreview: boolean;
   isFullScreen: boolean;
-  isConnected: boolean;
   isAudioMute: boolean;
   isMicOn: boolean;
 }
 
 const Home = () => {
   const navigate = useNavigate();
-  const [addPeerNodeId, setAddPeerNodeId] = useState("01HR439QSN8BM59HAR5P426TBP");
+  const [addPeerNodeId, setAddPeerNodeId] = useState("");
   const [isShowLogSink, setIsShowLogSink] = useState(false);
-  const [connectionObjStoreList, setConnectionObjStoreList] = useLocalStorage(
+  const [connectionObjStoreList, setConnectionObjStoreList] = useSessionStorage(
     "connectionObjStoreList",
     [],
   );
+  const connectionObjStoreListRef = useRef(connectionObjStoreList);
   const { iotEngine } = useIotEngine();
-
-  const preview = useRef<HTMLDivElement>(null);
 
   const connectionCreate = (peerNodeId: string) => {
     const connectionMgr: IConnectionMgr = iotEngine.getConnectionMgr();
@@ -46,7 +44,27 @@ const Home = () => {
       mAttachMsg: "",
       mPeerNodeId: peerNodeId,
     });
-    connectionMgr?.connectionCreate(param);
+    const connectObj = connectionMgr?.connectionCreate(param);
+    changeAndAddConnectObj(connectObj);
+  };
+
+  const changeAndAddConnectObj = (connectObj: IConnectionObj) => {
+    const nextConnectionObjStoreList = connectionObjStoreListRef.current;
+    if (
+      !nextConnectionObjStoreList.find(
+        (node: IConnectionObj) => node.peerNodeId === connectObj.peerNodeId,
+      )
+    ) {
+      nextConnectionObjStoreList.push({
+        peerNodeId: connectObj.peerNodeId,
+        localNodeId: connectObj.localNodeId,
+        isPreview: false,
+        isFullScreen: false,
+        isAudioMute: true,
+        isMicOn: false,
+      });
+    }
+    setConnectionObjStoreList(nextConnectionObjStoreList);
   };
 
   const connectionDestroy = (peerNodeId: string) => {
@@ -56,14 +74,22 @@ const Home = () => {
       .find(node => node.peerNodeId === peerNodeId);
     if (connectObj) {
       connectionMgr?.connectionDestroy(connectObj);
-      changeConnectionObjStore(connectObj.peerNodeId, "isConnected", false);
+      console.log(connectionMgr?.getConnectionList());
+      changeConnectionObjStore(peerNodeId, "isPreview", false);
+      changeConnectionObjStore(peerNodeId, "isAudioMute", true);
+      changeConnectionObjStore(peerNodeId, "isMicOn", false);
     }
   };
 
   const deleteConnectionObjStore = (peerNodeId: string) => {
-    setConnectionObjStoreList(
-      connectionObjStoreList.filter((node: ConnectionObjStore) => node.peerNodeId !== peerNodeId),
+    const nextConnectionObjStoreList = connectionObjStoreListRef.current;
+    const index = nextConnectionObjStoreList.findIndex(
+      (node: ConnectionObjStore) => node.peerNodeId === peerNodeId,
     );
+    if (index !== -1) {
+      nextConnectionObjStoreList.splice(index, 1);
+    }
+    setConnectionObjStoreList(nextConnectionObjStoreList);
   };
 
   useEffect(() => {
@@ -89,7 +115,6 @@ const Home = () => {
     const eventListener = {
       onConnectionCreateDone: (connectObj: IConnectionObj, errCode: number) => {
         log.log("onConnectionCreateDone", "connectObj", connectObj, "errCode", errCode);
-
         if (!connectObj) {
           Toast.show("error: connectObj is null");
           return;
@@ -100,34 +125,16 @@ const Home = () => {
           return;
         }
         connectObj.registerListener(connectionObjEventListeners);
-        if (
-          !connectionObjStoreList.find(
-            (node: IConnectionObj) => node.peerNodeId === connectObj.peerNodeId,
-          )
-        ) {
-          setConnectionObjStoreList([
-            ...connectionObjStoreList,
-            {
-              peerNodeId: connectObj.peerNodeId,
-              localNodeId: connectObj.localNodeId,
-              isPreview: false,
-              isFullScreen: false,
-              isConnected: true,
-            } as ConnectionObjStore,
-          ]);
-        } else {
-          changeConnectionObjStore(connectObj.peerNodeId, "isConnected", true);
-        }
+        changeAndAddConnectObj(connectObj);
       },
       onPeerDisconnected: (connectObj: IConnectionObj, errCode: number) => {
         log.log("onPeerDisconnected", "connectObj", connectObj, "errCode", errCode);
-
         if (!connectObj) {
           Toast.show("error: connectObj is null");
           return;
         }
         connectObj.unregisterListener(connectionObjEventListeners);
-        changeConnectionObjStore(connectObj.peerNodeId, "isConnected", false);
+        connectionDestroy(connectObj.peerNodeId);
       },
     };
     iotEngine.setLogLevel(LOG_LEVEL.LOG_LEVEL_DEBUG);
@@ -139,16 +146,9 @@ const Home = () => {
   }, []);
 
   const updateConnectionObjStoreList = () => {
-    const connectionMgr: IConnectionMgr = iotEngine.getConnectionMgr();
-    const connectionList = connectionMgr?.getConnectionList();
-
-    const nextConnectionObjStoreList = connectionObjStoreList;
+    const nextConnectionObjStoreList = connectionObjStoreListRef.current;
     for (let i = 0; i < nextConnectionObjStoreList.length; i++) {
       const node: ConnectionObjStore = nextConnectionObjStoreList[i];
-      const find = connectionList?.find((connection: IConnectionObj) => {
-        return connection.peerNodeId === node.peerNodeId;
-      });
-      node.isConnected = find?.getInfo().mState === ConnectStatus.CONNECTED;
       node.isPreview = false;
       node.isFullScreen = false;
       node.isAudioMute = true;
@@ -163,14 +163,17 @@ const Home = () => {
       return;
     }
     connectObj.streamSubscribeStart(STREAM_ID.BROADCAST_STREAM_1, "");
-    connectObj.setVideoDisplayView(STREAM_ID.BROADCAST_STREAM_1, preview.current);
+    connectObj.setVideoDisplayView(
+      STREAM_ID.BROADCAST_STREAM_1,
+      document.querySelector(`.grid-video-container-${peerNodeId}`) as HTMLDivElement,
+    );
 
     changeConnectionObjStore(peerNodeId, "isPreview", true);
   };
 
   const changeConnectionObjStore = (peerNodeId: string, key: string, value: any) => {
-    const nextConnectionObjStoreList = [...connectionObjStoreList];
-    connectionObjStoreList.find((node: ConnectionObjStore) => {
+    const nextConnectionObjStoreList = connectionObjStoreListRef.current;
+    nextConnectionObjStoreList.find((node: ConnectionObjStore) => {
       if (node.peerNodeId === peerNodeId && node.hasOwnProperty(key)) {
         (node as any)[key] = value;
       }
@@ -205,6 +208,7 @@ const Home = () => {
   };
 
   const goStreamManager = (peerNodeId: string) => {
+    muteAudio(peerNodeId, false);
     navigate(`/stream-manager/${peerNodeId}`);
   };
 
@@ -359,8 +363,9 @@ const Home = () => {
               </Grid.Item>
               <Grid.Item span={2}>
                 <div
-                  className={`grid-demo-item-block ${node.isFullScreen ? "fullscreen" : "preview"}`}
-                  ref={preview}
+                  className={`grid-demo-item-block ${
+                    node.isFullScreen ? "fullscreen" : "preview"
+                  } grid-video-container-${node.peerNodeId}`}
                 >
                   {node.isFullScreen && (
                     <Button
@@ -433,6 +438,8 @@ const Home = () => {
                   onClick={() => {
                     if (getStatus(node.peerNodeId) !== "CONNECTED") {
                       Toast.show("请先连接设备");
+                    } else if (node.isPreview !== true) {
+                      Toast.show("请先预览");
                     } else {
                       muteAudio(node.peerNodeId, node.isAudioMute);
                     }

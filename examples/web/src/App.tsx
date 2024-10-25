@@ -8,7 +8,7 @@ import defaultSettings from "../src/configs/callkit.config";
 
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { IotEngineProvider } from "./hooks/useIotEngine";
-import { useLocalStorage } from "./hooks/useLocalStorage";
+import { useSessionStorage } from "./hooks/useSessionStorage";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import PersonalCenter from "./pages/PersonalCenter";
@@ -26,7 +26,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  useLocalStorage("settings", defaultSettings);
+  useSessionStorage("settings", defaultSettings);
 
   const [version, setVersion] = useState<{
     version: string | undefined;

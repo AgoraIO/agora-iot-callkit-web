@@ -2,12 +2,16 @@ import { Button, Form, Input, Modal, NavBar, Toast } from "antd-mobile";
 import { useNavigate } from "react-router-dom";
 
 import { BASE_URL_TAIL, CREATE_ACCOUNT, fetchAPI, generateBasicAuth } from "../../configs/server";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useSessionStorage } from "../../hooks/useSessionStorage";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [settings] = useLocalStorage("settings");
+  const [settings] = useSessionStorage("settings");
   const onFinish = async (values: { account: string }) => {
+    if (settings.appId === "") {
+      Toast.show("please input appid in setting page");
+      return;
+    }
     const res = await fetchAPI({
       url: `${settings.region[0]}${BASE_URL_TAIL}${CREATE_ACCOUNT}`,
       body: {

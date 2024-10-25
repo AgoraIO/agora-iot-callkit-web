@@ -26,8 +26,6 @@ const StreamManager = () => {
   const [connectionObj, setConnectionObj] = useState<IConnectionObj | null>(null);
   const [isShowLogSink, setIsShowLogSink] = useState(false);
 
-  const [currentStreamType, _setCurrentStreamType] = useState<string>("BROADCAST_STREAM_1");
-
   const { peerNodeId } = useParams();
   const [streamList, setStreamList] = useState<Stream[]>([
     {
@@ -152,6 +150,15 @@ const StreamManager = () => {
   ]);
 
   const back = () => {
+    for (const index in streamList) {
+      const stream = streamList[index];
+      if (stream.isPreview) {
+        stopPreview(stream.value);
+      }
+      if (stream.isPlaying) {
+        onAudioPlay(stream.value, true);
+      }
+    }
     navigate("/");
   };
 
@@ -171,14 +178,6 @@ const StreamManager = () => {
           "videoHeight",
           videoHeight,
         );
-
-        const newStreamList = streamList.map(stream => {
-          if (stream.type === currentStreamType) {
-            return { ...stream, isPreview: true };
-          }
-          return stream;
-        });
-        setStreamList(newStreamList);
       },
     };
     const eventListener = {
@@ -201,6 +200,7 @@ const StreamManager = () => {
           Toast.show("error: connectObj is null");
           return;
         }
+        setConnectionObj(connectObj);
       },
     };
     connectionMgr?.registerListener(eventListener);
@@ -214,6 +214,15 @@ const StreamManager = () => {
       connectionMgr?.unregisterListener(eventListener);
       if (connectionObj) {
         connectionObj.unregisterListener(connectionObjEventListeners);
+      }
+      for (const index in streamList) {
+        const stream = streamList[index];
+        if (stream.isPreview) {
+          stopPreview(stream.value);
+        }
+        if (stream.isPlaying) {
+          onAudioPlay(stream.value, true);
+        }
       }
     };
   }, []);
@@ -350,7 +359,12 @@ const StreamManager = () => {
                 <div
                   className="grid-demo-item-block"
                   onClick={() => {
-                    onAudioPlay(stream.value, stream.isPlaying);
+                    if (stream.isPreview) {
+                      onAudioPlay(stream.value, stream.isPlaying);
+                    } else {
+                      Toast.show("请先预览");
+                      return;
+                    }
                   }}
                 >
                   {stream.isPlaying ? "静音" : "音放"}

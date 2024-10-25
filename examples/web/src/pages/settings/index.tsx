@@ -1,15 +1,13 @@
 import { Button, Form, Input, NavBar, Selector, Toast } from "antd-mobile";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 import defaultSettings from "../../configs/callkit.config";
 import { Region } from "../../configs/server";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useSessionStorage } from "../../hooks/useSessionStorage";
 import { enumToItems } from "../../utils";
 
 const Settings = () => {
-  const navigate = useNavigate();
-  const [settings, setSettings] = useLocalStorage("settings");
+  const [settings, setSettings] = useSessionStorage("settings");
 
   useEffect(() => {
     if (!settings) {
@@ -29,7 +27,7 @@ const Settings = () => {
     Toast.show({
       content: "保存成功",
     });
-    navigate("/");
+    location.href = "/";
   };
 
   const onFinishFailed = (errorInfo: any) => {

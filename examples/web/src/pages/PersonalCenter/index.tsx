@@ -2,10 +2,10 @@ import { List, NavBar } from "antd-mobile";
 import { useEffect } from "react";
 
 import defaultSettings from "../../configs/callkit.config";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useSessionStorage } from "../../hooks/useSessionStorage";
 
 const PersonalCenter = () => {
-  const [settings, setSettings] = useLocalStorage("settings");
+  const [settings, setSettings] = useSessionStorage("settings");
 
   useEffect(() => {
     if (!settings) {
@@ -18,12 +18,12 @@ const PersonalCenter = () => {
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     location.reload();
   };
 
   const clearAll = () => {
-    localStorage.clear();
+    sessionStorage.clear();
     location.reload();
   };
 
@@ -34,7 +34,7 @@ const PersonalCenter = () => {
           <div>我的</div>
         </div>
       </NavBar>
-      <List header="可点击列表">
+      <List>
         <List.Item
           onClick={() => {
             logout();
