@@ -27,7 +27,7 @@ const Settings = () => {
     Toast.show({
       content: "保存成功",
     });
-    location.hash = "/";
+    location.reload();
   };
 
   const onFinishFailed = (errorInfo: any) => {
