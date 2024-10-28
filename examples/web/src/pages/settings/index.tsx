@@ -27,7 +27,7 @@ const Settings = () => {
     Toast.show({
       content: "保存成功",
     });
-    location.href = "/";
+    location.href = location.origin + "/";
   };
 
   const onFinishFailed = (errorInfo: any) => {
