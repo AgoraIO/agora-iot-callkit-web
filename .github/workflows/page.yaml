@@ -7,6 +7,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    defaults:
+        run:
+          working-directory: ./examples/web
     environment: github-pages
     steps:
       - name: Checkout 🛎️
@@ -24,7 +27,6 @@ jobs:
           cache: "pnpm"
 
       - name: Build 🔧
-        working-directory: examples/web
         run: |
           pnpm install
           pnpm run build
