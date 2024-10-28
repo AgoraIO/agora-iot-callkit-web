@@ -27,7 +27,7 @@ const Settings = () => {
     Toast.show({
       content: "保存成功",
     });
-    location.reload();
+    history.back();
   };
 
   const onFinishFailed = (errorInfo: any) => {
