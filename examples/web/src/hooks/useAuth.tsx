@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         nodeRegion: res.data?.nodeRegion,
         nodeToken: res.data?.nodeToken,
       });
-      location.href = "/#/";
+      location.reload();
     }
   };
 
